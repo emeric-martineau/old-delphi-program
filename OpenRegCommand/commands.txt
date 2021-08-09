@@ -1,0 +1,87 @@
+List of commands
+================
+
+1) exit or quit
+---------------
+exit program
+
+2) pwk
+------
+print work key
+
+3) cd or ck
+-----------
+change key : "cd my_key"
+
+4) Load
+------- 
+change root key (HKEY_) : "load HKCU"
+
+5) ls
+-----
+list key and value : "ls \Software\"
+-l : list with details
+-p : stop when page is full
+-v : view value only
+-k : view key only
+
+Exemple :
+2007/7/31 10:34:47    WebView
+2007/7/31 10:34:47    z
+2007/7/31 10:34:47    SessionInfo
+String             39 WebFindBandHook
+String             39 FileFindBandHook
+String              6 Logon User Name
+Binary             36 ShellState
+dword               4 CleanShutdown
+<date or type>  <size><name>
+
+date : date/time of last writing
+
+6) mkkey
+--------
+make key, create a key : "mkkey my_key my_key2"
+
+7) rmkey
+--------
+remove key. You can specified multiple key : "rmkey \key1\key2"
+-f : force. Don't ask if we delete
+
+8) mkvalue
+----------
+make value : "mkvalue [-f] value_name type data"
+-f : don't prompt if already exist
+type : string  "coucou"
+       binary  0123
+       dword   hex:0123 or 291 
+       estring "%PATH%;value"
+
+9) rmvalue
+----------
+remove value : "rmvalue value1 value2..."
+
+10) help
+--------
+show help if single, list all command else list command specified.
+
+11) cat
+-------
+Display value of value
+
+12) export
+----------
+export key "export filename key"
+
+13) mv
+------
+move/rename key or value "mv oldkey newkey"
+
+14) import
+----------
+import registry key and value save by export commande "import filename keyvalue"
+**Not work for the moment
+
+15) autocomplet
+---------------
+autocomplet enable|disable : enable or disable replace . and .. char in commande line
+leave blanck to know if enable or disable

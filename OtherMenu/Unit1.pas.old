@@ -1,0 +1,318 @@
+// Nécéssite un image liste ???
+// Texte pas bien centré
+unit Unit1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  Menus, StdCtrls, ImgList;
+
+type
+   TDrawItem = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; Selected: Boolean) ;
+
+type
+  TForm1 = class(TForm)
+    PopupMenu1: TPopupMenu;
+    sssd1: TMenuItem;
+    Button1: TButton;
+    ImageList1: TImageList;
+    cvx1: TMenuItem;
+    xcvcvx1: TMenuItem;
+    N1: TMenuItem;
+    wwxwx1: TMenuItem;
+    wwx1: TMenuItem;
+    N2: TMenuItem;
+    dddddd1: TMenuItem;
+    dddd1: TMenuItem;
+    MainMenu1: TMainMenu;
+    cvcv1: TMenuItem;
+    cvcv2: TMenuItem;
+    cvc1: TMenuItem;
+    cvcv3: TMenuItem;
+    cvcv4: TMenuItem;
+    procedure DrawItem(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
+      Selected: Boolean);
+    procedure FormCreate(Sender: TObject);
+  private
+    procedure MenueDrawItemX(xMenu: TMenu);
+  public
+  end;
+procedure MenueDrawItem(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
+  Selected: Boolean);
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.DFM}
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  MenueDrawItemX(Menu);
+end;
+
+procedure TForm1.DrawItem(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
+  Selected: Boolean);
+begin
+  MenueDrawItem(Sender, ACanvas, ARect, Selected);
+end;
+
+procedure TForm1.MenueDrawItemX(xMenu: TMenu);
+var
+  i: integer;
+//  B: TBitmap;
+begin
+{  B := TBitmap.Create;
+  B.Width := 1;
+  B.Height := 1;
+}
+  for i := 0 to ComponentCount - 1 do
+    if Components[i] is TMenuItem then
+      begin
+//        FMenuItem := TMenuItem(Components[i]);
+        (Components[i] as TmenuItem).OnDrawItem := DrawItem ;
+{        if (FMenuItem.ImageIndex = -1) and
+           (FMenuItem.Bitmap.width = 0) and (xMenu <> nil) then
+          if FMenuItem.GetParentComponent.Name <> xMenu.Name then
+            FMenuItem.Bitmap.Assign(b);
+}
+      end;
+
+//  B.Free;
+  DrawMenuBar(handle);
+
+
+end;
+
+
+procedure MenueDrawItem(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
+  Selected: Boolean);
+var
+  txt: string;
+  B: TBitmap;
+
+  IConRect, TextRect: TRect;
+  FBackColor, FIconBackColor, FSelectedBkColor, FFontColor, FSelectedFontColor,
+    FDisabledFontColor, FSeparatorColor, FCheckedColor: TColor;
+
+  i, X1, X2: integer;
+  TextFormat: integer;
+  HasImgLstBitmap: boolean;
+  FMenuItem: TMenuItem;
+  FMenu: TMenu;
+
+begin
+  FMenuItem := TMenuItem(Sender);
+  FMenu := FMenuItem.Parent.GetParentMenu;
+
+  { couleur de fond des item }
+  FBackColor := clBtnFace ;// $00E1E1E1;
+  { couleur de fond des icones }
+  FIconBackColor := clBtnFace ;// ;$00D1D1D1;
+  { Couleur de fond des item sélectionné }
+  FSelectedBkColor := $00DCCFC7;
+  { Couleur de la police }
+  FFontColor := clBlack;
+  { Couleur de la police sélectionnée }
+  FSelectedFontColor := clBlack;//clNavy;
+  { Couleur de la police si item désactivé }
+  FDisabledFontColor := clGray;
+  { couleur des séparateurs }
+  FSeparatorColor := clBtnFace ;// ;$00D1D1D1;
+  { Couleur des item cochés }
+  FCheckedColor := clGray;
+
+  { Suivant si le menu ce lit de droite à gauche }
+  if FMenu.IsRightToLeft
+  then begin
+      X1 := ARect.Right - 20 ;
+      X2 := ARect.Right;
+  end
+  else begin
+      X1 := ARect.Left;
+      X2 := ARect.Left + 20 ;
+  end ;
+
+  { Créer le fond de la zone zone correspondant à l'icone }
+  IConRect := Rect(X1, ARect.Top, X2, ARect.Bottom);
+
+  { Créer la zone de texte }
+  TextRect := ARect;
+  { Créer le texte }
+  txt := ' ' + FMenuItem.Caption;
+
+  { Créer l'image accueilant l'icone }
+  B := TBitmap.Create;
+
+  { Met le mode transparent }
+  B.Transparent := True;
+  B.TransparentMode := tmAuto;
+
+  { Indique s'il y a une image d'une image liste }
+  HasImgLstBitmap := false;
+
+  if (FMenuItem.Parent.GetParentMenu.Images <>  nil)
+  then begin
+      if FMenuItem.ImageIndex <> -1
+      then
+          HasImgLstBitmap := true
+      else
+          HasImgLstBitmap := false;
+  end;
+
+  { S'il y a une image d'une image liste }
+  if HasImgLstBitmap
+  then begin
+      { Lit l'image }
+      FMenuItem.Parent.GetParentMenu.Images.GetBitmap(FMenuItem.ImageIndex, B) ;
+  end
+  else
+      { Sinon, s'il }
+      if FMenuItem.Bitmap.Width > 0
+      then
+          B.Assign(TBitmap(FMenuItem.Bitmap)) ;
+
+  { Suivant si le menu ce lit de droite à gauche }
+  if FMenu.IsRightToLeft then
+    begin
+      X1 := ARect.Left ;
+      X2 := ARect.Right - 20 ;
+    end
+  else
+    begin
+      X1 := ARect.Left + 20;
+      X2 := ARect.Right;
+    end ;
+
+  { Créer un rectangle contenant le texte }
+  TextRect := Rect(X1, ARect.Top, X2, ARect.Bottom);
+
+  { Ecrit le texte }
+  ACanvas.brush.color := FBackColor;
+  ACanvas.FillRect(TextRect);
+
+// A enlever pour FastSysTray
+  if FMenu is TMainMenu
+  then
+    { Pour chaque menu }
+    for i := 0 to FMenuItem.GetParentMenu.Items.Count - 1 do
+        { S'il s'agit d'un menu }
+        if FMenuItem.GetParentMenu.Items[i] = FMenuItem
+        then begin
+            ACanvas.brush.color := FIConBackColor ;
+            ACanvas.FillRect(ARect) ;
+
+            if (FMenuItem.ImageIndex = -1) and (FMenuItem.Bitmap.width = 0)
+            then begin
+                TextRect := ARect ;
+                break ;
+            end;
+        end;
+//
+  ACanvas.brush.color := FIconBackColor;
+  ACanvas.FillRect(IconRect);
+
+// A enlever pour FastSysTray
+// Mettre ACanvas.Font.Color := FFontColor à la place
+  { Sélectionne la bonne couleur suivant l'état actif ou non }
+  if FMenuItem.Enabled
+  then
+      ACanvas.Font.Color := FFontColor
+  else
+      ACanvas.Font.Color := FDisabledFontColor ;
+//
+
+  { Si on pointe sur l'item }
+  if Selected
+  then begin
+      ACanvas.brush.Style := bsSolid;
+      ACanvas.brush.color := FSelectedBkColor;
+      ACanvas.FillRect(TextRect);
+
+      ACanvas.Pen.color := FSelectedFontColor ;
+
+      ACanvas.Brush.Style := bsClear ;
+      ACanvas.Rectangle(TextRect.Left, TextRect.top, TextRect.Right, TextRect.Bottom);
+  end;
+
+  { Position l'icone }
+  X1 := IConRect.Left + 2;
+
+  { S'il y a une image, on l'a dessine }
+  if B <> nil
+  then
+      ACanvas.Draw(X1, IConRect.top + 1, B) ;
+
+// A enlever pour FastSysTray
+  if FMenuItem.Checked
+  then begin
+      ACanvas.Pen.color := FCheckedColor ;
+      ACanvas.Brush.Style := bsClear ;
+      ACanvas.RoundRect(IconRect.Left, IconRect.top, IconRect.Right,
+                        IconRect.Bottom, 3, 3) ;
+  end;
+//
+
+  { Si c'est une barre de séparation }
+  if FMenuItem.Caption <> '-'
+  then begin
+      { Passe le fond en mode transparent }
+      SetBkMode(ACanvas.Handle, TRANSPARENT);
+
+      { Position le texte }
+      if FMenu.IsRightToLeft
+      then
+          ACanvas.Font.Charset := ARABIC_CHARSET ;
+
+      if FMenu.IsRightToLeft
+      then
+          TextFormat := DT_RIGHT or DT_RTLREADING or DT_VCENTER
+      else
+          TextFormat := DT_VCENTER ;
+
+      { Si le texte est en Default }
+      if FMenuItem.Default
+      then begin
+          { Affiche le texte en gras }
+          ACanvas.Font.Style := [fsBold] ;
+      end;
+
+      DrawtextEx(ACanvas.Handle,
+                 PChar(txt),
+                 Length(txt),
+                 TextRect, TextFormat, nil);
+
+// A enlever pour FastSysTray
+      txt := ShortCutToText(FMenuItem.ShortCut) +  ' ';
+
+      if FMenu.IsRightToLeft
+      then
+          TextFormat := DT_LEFT
+      else
+          TextFormat := DT_RIGHT ;
+
+      DrawtextEx(ACanvas.Handle,
+                 PChar(txt),
+                 Length(txt),
+                 TextRect, TextFormat, nil);
+//
+  end
+  else begin
+      ACanvas.Pen.Color := FSeparatorColor ;
+      ACanvas.MoveTo(ARect.Left + 10,
+                     TextRect.Top +
+                     Round((TextRect.Bottom - TextRect.Top) div 2));
+      ACanvas.LineTo(ARect.Right - 2,
+                     TextRect.Top +
+                     Round((TextRect.Bottom - TextRect.Top) div 2))
+  end ;
+
+  B.free;
+end;
+
+end.
+
+
+end.

@@ -1,0 +1,8 @@
+\Software\Microsoft
+
+\Software\Microsoft\..\Microsoft\Windows\CurrentVersion\Explorer\z
+\Software\Microsoft\Windows\CurrentVersion\Explorer\z
+
+
+rmkey fait retourner le label affiché à \
+Software\Microsoft\Windows\CurrentVersion\Explorer\\

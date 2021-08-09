@@ -1,0 +1,406 @@
+unit extraire;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  ExtCtrls, ComCtrls, StdCtrls;
+
+type
+  TextraireArchive = class(TForm)
+    Label1: TLabel;
+    fichierEnCours: TLabel;
+    Annuler: TButton;
+    Suspendre: TButton;
+    Reduire: TButton;
+    ProgressBar1: TProgressBar;
+    StartEncode: TTimer;
+    procedure StartEncodeTimer(Sender: TObject);
+    procedure AnnulerClick(Sender: TObject);
+    procedure FormResize(Sender: TObject);
+    procedure ReduireClick(Sender: TObject);
+    procedure SuspendreClick(Sender: TObject);
+  private
+    { Déclarations privées}
+    { Indique si l'on doit quitter la fenêtre }
+    toClose : Boolean ;
+    { Nombre de fichier à mettre dans l'archive }
+    NbFile : Integer ;
+    { Numéro du fichier en cours }
+    NumFile : Integer ;
+        
+    procedure IgnoreExctractUUEncode(Var fichierALire : TextFile) ;
+    function ExtractUUEncode(nomDeSortie : String; repertoireDestination : String; Var fichierALire : TextFile) : Boolean;
+    function IsFileInList(nomFichier : String) : Boolean ;
+    function CutString(texte : String) : String ;        
+  public
+    { Déclarations publiques}
+  end;
+
+var
+  extraireArchive: TextraireArchive;
+
+implementation
+
+uses main, attendre;
+
+{$R *.DFM}
+
+
+{*******************************************************************************
+ * Décode tous les fichiers contenu dans une archive
+ *
+ * Entrée : archive, répertoire de destination
+ * Sortie : aucune
+ * Retour : True si ok, False sinon
+ ******************************************************************************}
+procedure TextraireArchive.StartEncodeTimer(Sender: TObject);
+//function TmainForm.UUDecodeFile(nomFichierAlire : String; repertoireDestination : string) : Boolean ;
+Var fichierALire : TextFile ;
+    ligne, debutLigne, nomDeSortie : String ;
+    retourMessageBox : Integer ;
+begin
+    NbFile := Form1.ListView1.SelCount ;
+
+    if NbFile  > 0
+    then begin
+        NumFile := 1 ;
+            
+        AssignFile(fichierALire, Form1.nomArchive) ;
+        FileMode := 0 ;
+        Reset(fichierALire) ;
+
+        { Désalcive le timer }
+        StartEncode.Enabled := False ;
+
+        while not Eof(fichierALire) do
+        begin
+            ReadLn(fichierALire, ligne) ;
+            ligne := Trim(ligne) ;
+            debutLigne := LowerCase(Form1.StrCopyN(ligne, 5)) ;
+
+            if debutLigne = 'begin'
+            then begin
+                 nomDeSortie := Form1.StrCopyToN(ligne, 11) ;
+
+                 if (IsFileInList(nomDeSortie))
+                 then begin
+                     fichierEnCours.Caption := CutString(nomDeSortie) + ' (' + IntToStr(NumFile) + '/' + IntToStr(NbFile) + ')' ;
+                     UpdateWindow(Self.Handle) ;
+                     ProgressBar1.Position := NumFile * 100 div NbFile ;
+
+                     { Vérifie que le fichier de destination n'existe pas }
+                     if (FileExists(Form1.pathFile + nomDeSortie))
+                     then begin
+                         retourMessageBox := Application.MessageBox(PChar('Le fichier ' + Form1.pathFile + nomDeSortie + ' existe déjà. Voulez-vous le remplacer ?'), 'Fichier déjà existant', MB_ICONQUESTION + MB_YESNOCANCEL) ;
+
+                         if (retourMessageBox = IDYES)
+                         then begin
+                             { Remplace le fichier }
+                             if ExtractUUEncode(nomDeSortie, Form1.pathFile, fichierALire) = False
+                             then begin
+                                 CloseFile(fichierALire) ;
+                                 exit ;
+                             end
+                         end
+                         else if (retourMessageBox = IDNO)
+                         then
+                             IgnoreExctractUUEncode(fichierALire)
+                         else begin
+                             CloseFile(fichierALire) ;
+                             { Quitte la fonction }
+                             exit ;
+                         end ;
+                     end
+                     else begin
+                         if ExtractUUEncode(nomDeSortie, Form1.pathFile, fichierALire) = False
+                         then begin
+                             CloseFile(fichierALire) ;
+                             exit ;
+                         end ;
+                     end ;
+
+                     NumFile := NumFile + 1 ;
+                 end
+                 else
+                     IgnoreExctractUUEncode(fichierALire) ;
+
+                 { Si on doit quitter la fenêtre }
+                 if toClose = True
+                 then begin
+                     {Ferme les fichiers }
+                     {$I-}
+                     { On supprime la gestion des erreurs car le fichier peut ou
+                       non être ouvert. Impossible d'en être sûr }
+                     CloseFile(FichierALire) ;
+                     {$I+}
+                     Break ;
+                 end
+                 else begin
+                     { Lit une ligne. Normalement le end }
+                     ReadLn(fichierALire, ligne) ;
+                     ligne := LowerCase(ligne) ;
+
+                     if ligne <> 'end'
+                     then
+                         Form1.ListeErreurs.Lines.Append('La ligne "end" n''a pas été détectée à la fin des données pour le fichier ' + nomDeSortie) ;
+                 end ;
+            end ;
+        end ;
+
+        if toClose <> True
+        then
+            CloseFile(fichierALire) ;
+    end ;
+    
+    Close ;
+end ;
+
+{*******************************************************************************
+ * Ignore le flux de donnée en cours
+ *
+ * Entrée : Fichier à lire
+ * Sortie : aucune
+ * Retour : auncun
+ ******************************************************************************}
+procedure TextraireArchive.IgnoreExctractUUEncode(Var fichierALire : TextFile) ;
+Var ligneEnCours : String ;
+begin
+    repeat
+        ReadLn(fichierALire, ligneEnCours) ;
+        ligneEnCours := Trim(ligneEnCours) ;
+        Application.ProcessMessages ;
+
+        { Si on doit quitter la fenêtre }
+        if toClose = True
+        then begin
+            {Ferme les fichiers }
+            CloseFile(FichierALire) ;
+            Exit ;
+        end ;
+
+    until ligneEnCours = '`';   { Si on rencontre une ligne vide, on l'ignore}
+end ;
+
+{*******************************************************************************
+ * Décode les information dans un fichier à partir de la position de la dernière
+ * ligne.
+ * Après appel de la fonction, si tout c'est bien passé, la ligne courante du
+ * fichier est la ligne end.
+ *
+ * Entrée : Nom de sortie du fichier, répertoire de de destination, fichier à lire
+ * Sortie : aucune
+ * Retour : False en cas d'erreur
+ ******************************************************************************}
+function TextraireArchive.ExtractUUEncode(nomDeSortie : String; repertoireDestination : String; Var fichierALire : TextFile) : Boolean;
+Var Buffer : Array[0..45] of Byte;
+    ligneEncours : String ;
+    fichierAEcrire : File ;
+    longueurLigneEnCours : Integer ;
+    longueurPresume : Integer ;
+    longueurBuffer : Integer ;
+    tailleFichier  : Integer ;
+    i, j : Integer ;
+    c1, c2, c3, c4 : Byte ;
+    nbCarEcrit : Integer ;
+begin
+    Result := True ;
+
+    { Ouvre le fichier a écrire }
+    AssignFile(fichierAEcrire, repertoireDestination + nomDeSortie) ;
+    Rewrite(fichierAEcrire, 1) ;
+
+    { Initialise la taille du fichier à 0 }
+    tailleFichier := 0 ;
+
+    repeat
+        { Lit une ligne du fichier }
+        repeat
+            ReadLn(fichierALire, ligneEnCours) ;
+            ligneEnCours := Trim(ligneEnCours) ;
+
+            if ligneEnCours = ''
+            then
+                 form1.ListeErreurs.Lines.Append('Une ligne vide a été détectée dans le flux de données du fichier ' + nomDeSortie + '. Ligne ignorée.') ;
+
+        until ligneEnCours <> '';   { Si on rencontre une ligne vide, on l'ignore}
+
+        ligneEnCours := Trim(ligneEncours) ;
+
+        if (ligneEnCours <> '`')
+        then begin
+            longueurLigneEncours := length(ligneEnCours) ;
+
+            { Si le premier caractère est compris entre '!' et 'M' }
+            if (Ord(ligneEnCours[1]) > $20) and (Ord(ligneEnCours[1]) < $4E)
+            then begin
+                { Calcule la longueur des données de la ligne }
+                longueurBuffer := Form1.CodeOfUUD(ligneEnCours[1]) ;
+
+                { Calcule la longueur présumé de la ligne.
+                  Longueur des données /3 * 4 -> transcrit 3 caractère pour 4.
+                  Il faut ajouter 4 caractères s'il y a une reste. + 1 pour l'
+                  octet de longueur. }
+                longueurPresume := ((longueurBuffer div 3) * 4) + 1 ;
+
+                if (longueurBuffer mod 3) > 0
+                then
+                    longueurPresume := longueurPresume + 4 ;
+
+                if longueurPresume <> longueurLigneEncours
+                then begin
+                    Form1.ListeErreurs.Lines.Append('La longueur indiqué par l''indicateur de longueur de la ligne ne correspond pas à la longueur réelle de la ligne. Ligne ignorée.') ;
+                end
+                else begin
+                    tailleFichier := tailleFichier + longueurBuffer ;
+
+                    i := 2 ;
+                    j := 0 ;
+
+                    repeat
+                        c1 := Form1.CodeOfUUD(ligneEncours[i]) ;
+                        c2 := Form1.CodeOfUUD(ligneEncours[i + 1]) ;
+                        c3 := Form1.CodeOfUUD(ligneEncours[i + 2]) ;
+                        c4 := Form1.CodeOfUUD(ligneEncours[i + 3]) ;
+
+                        Buffer[j] := (c1 shl 2) or ((c2 and 48) shr 4) ;
+                        Buffer[j + 1] := ((c2 and 15) shl 4) or (c3 shr 2) ;
+                        Buffer[j + 2] := ((c3 and 3) shl 6) or c4 ;
+
+                        i := i + 4 ;
+                        j := j + 3 ;
+                    until (i >= longueurLigneEnCours) ;
+
+                    BlockWrite(fichierAEcrire, Buffer, longueurBuffer, nbCarEcrit) ;
+                end ;
+            end
+            else
+                Form1.ListeErreurs.Lines.Append('Un indicateur de longueur de ligne est erroné dans le flux de données du fichier ' + nomDeSortie + '. Ligne ignorée.') ;
+
+            { Si on doit quitter la fenêtre }
+            if toClose = True
+            then begin
+                {Ferme les fichiers }
+                CloseFile(FichierALire) ;
+                CloseFile(FichierAEcrire) ;
+                Exit ;
+            end ;
+        end ;
+        
+        Application.ProcessMessages ;
+    until (ligneEnCours = '`') ;
+
+    { Vérifie que la taille extaite du fichier est la taille sur le disque dur }
+    if FileSize(fichierAEcrire) <> tailleFichier
+    then
+        if Application.MessageBox(PChar('La taille des données extraites du fichier ' + repertoireDestination + nomDeSortie + ' ne correspondent pas à sa taille sur le disque ! Voulez-vous continuer l''extraction ?'#10#13'(Le fichier ne sera pas supprimé)'), 'Erreur', MB_ICONERROR + MB_YESNO) = IDNO
+        then
+             Result := False ;
+
+    CloseFile(fichierAEcrire) ;
+end ;
+
+{*******************************************************************************
+ * Vérifie si le fichier en cours est dans la liste des fichiers sélectionnés
+ *
+ * Entrée : Nom du fichier
+ * Sortie : aucune
+ * Retour : true si trouvé, false sinon
+ ******************************************************************************}
+function TextraireArchive.IsFileInList(nomFichier : String) : Boolean ;
+Var ItemEnCours : TListItem ;
+    i : Integer ;
+begin
+    Result := False ;
+
+    For i := 0 to Form1.ListView1.SelCount - 1 do
+    Begin
+        if i = 0
+        then
+            ItemEnCours := Form1.ListView1.Selected
+        else
+            ItemEnCours := Form1.ListView1.GetNextItem(ItemEnCours, sdBelow, [isSelected]) ;
+
+        if ItemEnCours.Caption = nomFichier
+        then begin
+            Result := True ;
+            exit
+        end ;
+    end ;
+end ;
+
+procedure TextraireArchive.AnnulerClick(Sender: TObject);
+begin
+    toClose := True ;
+end;
+
+procedure TextraireArchive.FormResize(Sender: TObject);
+begin
+    { Réaffiche toute les fenêtres }
+    Form1.WindowState := wsNormal ;
+    WindowState := wsNormal ;
+end;
+
+procedure TextraireArchive.ReduireClick(Sender: TObject);
+begin
+    { Réduit toute les fenêtres }
+    Form1.WindowState := wsMinimized ;
+    WindowState := wsMinimized ;
+end;
+
+procedure TextraireArchive.SuspendreClick(Sender: TObject);
+Var attendre : Tattente ;
+begin
+    { Créer la fenêtre d'attente }
+    attendre := Tattente.Create(Self) ;
+    { Copie le label des fichiers }
+    attendre.fichierEnCours.Caption := fichierEnCours.Caption ;
+    { Copie la barre de progression }
+    attendre.ProgressBar1.Position := ProgressBar1.Position ;
+    { Pointe sur la variable }
+    attendre.toClose := @toClose ;
+    { Label caption }
+    attendre.Label1.Caption := Label1.Caption ;
+        
+    Visible := False ;
+
+    attendre.ShowModal ;
+    attendre.Free ;
+        
+    Visible := True ;
+end;
+
+{*******************************************************************************
+ * Coupe le nom du fichier pour l'affichage
+ *
+ * Entrée : texte contenant le nom du fichier
+ * Sortie : auncune
+ * Retour : le texte qu'il faut afficher
+ ******************************************************************************}
+function TextraireArchive.CutString(texte : String) : String ;
+Var i : Integer ;
+    longueurChaine : Integer ;
+begin
+    Result := '' ;
+    longueurChaine := length(texte) ;
+
+    if longueurChaine > 36
+    then begin
+        { On coupe le texte }
+        { On copie le 20 premier caractères }
+        For i := 1 to 16 do
+            Result := Result + Texte[i] ;
+
+        { le ... }
+        Result := Result + ' ... ' ;
+
+        { On copie le 20 premier caractères }
+        For i := (longueurChaine - 16) to longueurChaine do
+            Result := Result + Texte[i] ;
+    end
+    else
+        Result := Texte ;
+
+end ;
+
+end.

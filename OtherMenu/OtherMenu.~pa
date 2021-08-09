@@ -1,0 +1,25 @@
+unit OtherMenu;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  Menus;
+
+type
+  TForm1 = class(TPopupMenu)
+
+  private
+    { Déclarations privées}
+  public
+    { Déclarations publiques}
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.DFM}
+
+end.

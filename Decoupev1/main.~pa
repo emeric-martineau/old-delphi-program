@@ -1,0 +1,67 @@
+unit main;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  StdCtrls, DecoupLib, Md5 ;
+
+type
+  TForm1 = class(TForm)
+    Button1: TButton;
+    OpenDialog1: TOpenDialog;
+    procedure Button1Click(Sender: TObject);
+  private
+    { Déclarations privées}
+    procedure Separer(LeFichier : String; TailleArchive : Cardinal; FichierDeSortie : String) ;
+  public
+    { Déclarations publiques}
+  end;
+
+var
+  Form1 : TForm1;
+  EnteteFichier : Entete ;
+
+implementation
+
+{$R *.DFM}
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+/////
+//    Faire les animation (bare de progression...)
+/////
+    { Ouvre la boite de dialogue }
+    if OpenDialog1.Execute
+    then begin
+        Separer(OpenDialog1.FileName, 1000, 'c:\temp.txt') ;
+    end ;
+end;
+
+procedure TForm1.Separer(LeFichier : String; TailleArchive : Cardinal; FichierDeSortie : String) ;
+Var
+     F    : File of byte ;
+begin
+    { Initialise l'entête à 0 }
+    FillChar(EnteteFichier, SizeOf(EnteteFichier), 0) ;
+
+    { Initialisation l'entête }
+    InitialiserEnteteFichier(@EnteteFichier, @LeFichier) ;
+
+    { Calcule le nombre de volume }
+    if (EnteteFichier.LengthOfFile mod TailleArchive) > 0
+    then
+        EnteteFichier.NumberOfVolume := 1 ;
+
+    EnteteFichier.NumberOfVolume := EnteteFichier.NumberOfVolume + (EnteteFichier.LengthOfFile div TailleArchive) ;
+
+/////
+    FileMode := 1 ;
+    AssignFile(F, 'c:\temp.txt') ;
+    Rewrite(F) ;
+    BlockWrite(F, EnteteFichier, SizeOf(EnteteFichier)) ;
+    CloseFile(F) ;
+    
+end ;
+
+end.

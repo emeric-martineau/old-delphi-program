@@ -1,0 +1,37 @@
+rm : remove key or value            
+        
+    
+
+replacekey        
+     ReplaceKey
+restorekey
+     RestoreKey
+                   
+
+utilisation des joker : '*" et "?"
+
+http://fr.wikipedia.org/wiki/Base_de_registre
+
+FAIT
+oregcmd <HK de démarrage>\key ou /
+
+ck ou cd : change key
+exit
+ls  -l -p : value type propriétaire taille Date-heure de dernière écriture de la clé valeur
+     GetKeyNames
+     GetValueNames
+     GetDataInfo
+pwk : print work key
+load HKCU...
+mkkey "key1"  "key2" : make 
+rmkey -f "key1" "key2" : remove key
+mkvalue : make a value
+          dword hex:...
+          binary
+          string
+          string_expand
+cat value : show value data
+export key nameoffile : export key in .reg format
+     SaveKey
+mv : move key or value
+     MoveKey
